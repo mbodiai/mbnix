@@ -37,7 +37,7 @@ validate_mb_color() {
     if [ -z "$MB_COLOR" ]; then
         printf ""
         # printf "Tip: You can set MB_COLOR to one of the following colors: RED, GREEN, PINK, CYAN, YELLOW, BLUE, MAGENTA, PINK_BOLD, CYAN_BOLD\n"
-        MB_COLOR="PINK_BOLD" # Default color (Pink Bold)
+        MB_COLOR="$PINK_BOLD" # Default color (Pink Bold)
     else
 
         # Define a list of valid ANSI color names
@@ -123,7 +123,7 @@ sleep 2
 kill "$pid2" # Terminate the second animation
 
 # Export color variables
-export MB_COLOR="$MB_COLOR"
+export MB_COLOR
 export RESET="$RESET"
 export RED="$RED"
 export RED_BOLD="$RED_BOLD"
