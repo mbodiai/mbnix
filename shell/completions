@@ -1,0 +1,53 @@
+source ~/.fzf.zsh
+
+# FZF Path Completion
+_fzf_path_completion() {
+    echo "Running path completion..."
+    local selected_path
+    selected_path=$(find . -type f | fzf --height 40% --layout=reverse --border --query="$LBUFFER" --select-1 --exit-0)
+    if [[ -n $selected_path ]]; then
+        LBUFFER="$selected_path"
+    fi
+    zle redisplay
+}
+zle -N fzf-path-completion _fzf_path_completion
+bindkey '^p' fzf-path-completion
+
+
+# FZF Command Completion
+_fzf_command_completion() {
+    LBUFFER=$(whence -cm | fzf --height 40% --layout=reverse --border --query="$LBUFFER" --select-1 --exit-0)
+    zle redisplay
+}
+zle -N fzf-command-completion _fzf_command_completion
+bindkey '^x' fzf-command-completion
+
+# Fuzzy find a file in the current directory
+fzf-file-search() {
+    local file
+    file=$(fzf --preview 'bat --style=numbers --color=always {} | head -500')
+    if [[ -n $file ]]; then
+        if [[ -d $file ]]; then
+            cd "$file"
+        else
+            ${EDITOR:-code} "$file"
+        fi
+    fi
+}
+alias ff='fzf-file-search'
+
+# Additional custom commands...
+# (include all other functions and aliases as needed)
+rg-fzf() {
+rg --line-number --no-heading '' | fzf --delimiter : --nth 3.. --preview 'cat {1} | sed -n "$(( {2} - 5 )),$(( {2} + 5 ))p"' --bind "enter:execute(code -g {1}:{2})"
+}
+alias f='rg-fzf'
+
+# Zsh Autosuggestions
+source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=cyan'
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_COMPLETION_IGNORE='cd *'
+ZSH_AUTOSUGGEST_USE_ASYNC=true
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+bindkey '^[e' autosuggest-accept
