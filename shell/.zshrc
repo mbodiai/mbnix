@@ -55,10 +55,22 @@ install_util() {
         fi
     fi
 }
+
+setopt PROMPT_SUBST
+current_git_branch=""
+
+update_git_branch() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    current_git_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+  else
+    current_git_branch=""
+  fi
+}
+chpwd() {
+  update_git_branch
+}
 # ================================
 __mb_prompt() {
-    local user_host="${USER}@${MB_PROMPT:-mbodi}"
-    local cwd="${PWD/#$HOME/~}"
     local repo=""
     local git_branch=""
     local repo_branch=""
@@ -103,99 +115,8 @@ echo $(__mb_prompt)
 # ================================
 # Configure PS1 with Color Variables and Prompt Function
 # ================================
-export PS1="%n@$(__mb_prompt) %# "
-# ================================
-# Setup prompt
-# ================================
-# if [ -z "$MB_PROMPT" ]; then
-#     export MB_PROMPT="mbodi"
-# fi
-# __mb_prompt() {
-#     local git_branch=""
-#     local git_remote=""
-#     local repo=""
-#     local repo_branch=""
-#     local nix_shell=""
-
-#     # Check if inside a Git repository and get the branch name
-#     if git rev-parse --is-inside-work-tree &>/dev/null; then
-#         git_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-
-#         # Get the remote origin URL and extract the repo name
-#         git_remote=$(git config --get remote.origin.url)
-#         if ! [ -z "$git_remote" ]; then
-#             repo="${git_remote##*/}"
-#             repo="${repo%.git}" # Remove .git suffix if present
-#             repo_branch="${repo}:${git_branch}"
-#         fi
-#     fi
-
-#     # Check if in a Nix shell
-#     if [ -n "$IN_NIX_SHELL" ]; then
-#         nix_shell="${MB_COLOR}$MB_PROMPT${RESET}"
-#     fi
-#     echo $nix_shell
-#     return 0
-#     # Display format: mb[repo:branch] or repo:branch based on nix shell status
-#     if ! [ -z "$repo_branch" ]; then
-#         if ! [ -z "$nix_shell" ]; then
-#             echo "${nix_shell}(${repo_branch})${RESET}"
-#         else
-#             echo "(${repo_branch})${RESET}"
-#         fi
-#     fi
-# }
-# __mb_prompt
-# # Check if running in zsh before using setopt
-# if [ -n "$ZSH_VERSION" ]; then
-#     setopt PROMPT_SUBST
-# fi
-# export PS1=$'%{\033[01;36m%}%n@%\:'"$(__mb_prompt)"$'%{\033[01;34m%}%~%{\033[0m%} %# '
-
-# ================================
-# Define the __mb_prompt Function
-# ================================
-# if [ -z "$MB_PROMPT" ]; then
-#     export MB_PROMPT="mbodi"
-# fi
-
-# __mb_prompt() {
-#     local user_host="${USER}@${MB_PROMPT:-mbodi}"
-#     local cwd="${PWD/#$HOME/~}"
-#     local repo=""
-#     local git_branch=""
-#     local repo_branch=""
-#     local nix_shell=""
-
-#     if git rev-parse --is-inside-work-tree &>/dev/null; then
-#         repo=$(git rev-parse --show-toplevel 2>/dev/null)
-#         git_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-#         repo="${repo##*/}" # Extract repo name
-#         repo_branch="${repo}:${git_branch}"
-#     fi
-
-#     if [ -n "$IN_NIX_SHELL" ]; then
-#         nix_shell="${MB_PROMPT}"
-#     fi
-
-#     if [ -n "$repo_branch" ]; then
-#         if [ -n "$nix_shell" ]; then
-#             echo "${user_host}(${repo_branch})${cwd} %"
-#         else
-#             echo "${user_host}(${repo_branch})${cwd} %"
-#         fi
-#     else
-#         echo "${user_host}${cwd} %"
-#     fi
-# }
-
-
-# ================================
-# Configure PS1 with Color Variables and Prompt Function
-# ================================
-# export PS1="$(__mb_prompt)"
-# export PS1=$'%{\033[01;36m%}%n@%\:'"$(__mb_prompt)"$'%{\033[01;34m%}%~%{\033[0m%} %# '
-# ================================
+# PROMPT="'%n@%~'$(__mb_prompt)'%# '"
+# export PS1="%n@$(__mb_prompt) %# "
 
 ensure_zsh
 setup_mbnix

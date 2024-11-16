@@ -1,5 +1,5 @@
+#! /usr/bin/sh
 git_search_term() {
-    # Function to display usage/help message
     usage() {
         echo "Usage: git_search_term TERM -p PATH [-d] [-h] [-C CONTEXT]"
         echo
@@ -34,34 +34,31 @@ git_search_term() {
     # Parse remaining options
     shift # Shift to process the remaining options
     while getopts ":p:C:dh" opt; do
-        case $opt in
-        p) search_path=$(realpath "$OPTARG") ;;
-        C) context_lines="$OPTARG" ;;
-        h)
-            usage
-            return
-            ;;
-        \?)
-            echo "Invalid option: -$OPTARG"
-            usage
-            return 1
-            ;;
-        esac
-    done
+            case $opt in
+            p) search_path=$(realpath "$OPTARG") ;;
+            C) context_lines="$OPTARG" ;;
+            d) search_in_diffs=true ;;
+            h)
+                usage
+                return
+                ;;
+            \?)
+                echo "Invalid option: -$OPTARG"
+                usage
+                return 1
+                ;;
+            esac
+        done
 
     # Ensure the path is valid
-    if [[ ! -d "$search_path" && ! -f "$search_path" ]]; then
+    if  [ -z "$search_path" ] && ! [ -f "$search_path" ]; then
         becho "Error: Invalid path '$search_path'."
         return 1
     fi
-
-    # Perform the search
-    echo "Searching for '$search_term' in diffs (actual content changes) for path '$search_path' with $context_lines lines of context..." | becho -
-    git log --all -p -U"$context_lines" -S "$search_term" -- "$search_path" --date-order | batcat --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
+    git log --all -p -U"$context_lines" -S "$search_term" -- "$search_path" --date-order | $BAT --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
 
 }
 
-alias gs='git_search_term'
 
 # Function to clean up a submodule and push it to a temporary branch
 git_submodule_clean() {
@@ -169,32 +166,87 @@ gsub_make() {
 }
 alias gsub='gsub_make'
 # Function to update and push each submodule to a temporary branch
+
+
+git_submodule_reinit() {
+    if [ -z "$1" ]; then
+        echo "Usage: git_submodule_reinit <submodule-path>"
+        return 1
+    fi
+
+    submodule_path="$1"
+
+    # Reinitialize submodules
+    echo "Reinitializing submodules..."
+    git submodule init
+
+    # Synchronize URLs for submodules
+    echo "Synchronizing submodule URLs..."
+    git submodule sync
+
+    # Update submodules recursively
+    echo "Updating submodules recursively..."
+    git submodule update --init --recursive
+
+    # Pull the submodule back from the temporary branch
+    echo "Re-adding submodule '$submodule_path' from temp branch..."
+
+    # Get the saved submodule URL from the temp file
+    submodule_url=$(cat /tmp/"$submodule_path"_url.txt)
+    if [ -z "$submodule_url" ]; then
+        echo "Error: Could not find saved URL for submodule '$submodule_path'."
+        return 1
+    fi
+    echo "Submodule URL: $submodule_url"
+
+    git submodule add "$submodule_url" "$submodule_path"
+    (cd "$submodule_path" && git checkout temp_submodule_branch)
+
+    # Commit the changes to the main repo
+    git add .gitmodules "$submodule_path"
+    git commit -m "Re-added submodule $submodule_path from temp branch."
+
+    echo "Submodule '$submodule_path' reinitialized successfully from temp branch."
+}
+alias gsr='git_submodule_reinit'
+gsub_make() {
+    if [ -z "$1" ]; then
+        echo "Usage: gsub <submodule-path>"
+        return 1
+    fi
+
+    git_submodule_clean "$1"
+    git_submodule_reinit
+}
+
+# Function to update and push each submodule to a temporary branch
 git_push_temp() {
     # Update submodules and ensure they are at the latest commit
     git submodule update --recursive --remote
 
+
     # Iterate over all submodules
-    git submodule foreach '
+    git submodule foreach "
         # Create a temporary branch inside the submodule
-        branch_name="temp_submodule_branch_$(date +%s)"
-        echo "Creating and pushing to branch $branch_name for submodule $name..."
-        git checkout -b "$branch_name"
+        branch_name=\"temp_submodule_branch_\$(date +%s)\"
+        echo \"Creating and pushing to branch \$branch_name for submodule \$name...\"
+        git checkout -b \"\$branch_name\"
 
         # Add all changes and commit
         git add .
-        git commit -m "Updated submodule $name on temporary branch $branch_name"
+        git commit -m \"Updated submodule \$name on temporary branch \$branch_name\"
 
         # Push the temporary branch to the remote
-        git push origin "$branch_name"
+        git push origin \"\$branch_name\"
 
         # Return to the original branch
         git checkout -
-    '
+    "
 
     echo "Submodules updated and pushed to temporary branches."
 }
 
-alias gpt='git_push_temp'
+
 
 git_list_diffs_last_commit() {
 
@@ -204,12 +256,14 @@ git_list_diffs_last_commit() {
     # Fetch logs with filenames and submodule changes, format and sort by timestamp
     git log --submodule --name-only --pretty=format:"%ad" --date=iso |
         awk '/^[0-9]{4}/ {date=$0; next} NF {print date " " $0}' | sort |
-        batcat --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
+        $BAT --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
     echo
     for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ refs/remotes/); do
         timestamp=$(git log -1 --format="%ci" $branch)
-        echo "$timestamp - $branch" | batcat --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
+        echo "$timestamp - $branch" | $BAT --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
     done
 }
 
+alias gpt='git_push_temp'
 alias gld='git_list_diffs_last_commit'
+alias gs='git_search_term'

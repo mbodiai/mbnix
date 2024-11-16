@@ -150,13 +150,10 @@ if [ -z "$MB_INSTALL_DIR" ]; then
     export MB_INSTALL_DIR
 fi
 
-# Update PATH safely
-PATH="/usr/local/bin:/usr/local/sbin:$HOME/.local/bin:$PATH"
-export PATH
 
-echo "does path $MB_WS/shell/colors.sh exist? $(ls $MB_WS/shell/colors.sh)"
 
-echo "does .zshrc exist? $(ls $MB_WS/.zshrc)"
+
+
 export INSTALL_MBNIX_INSTALLING=1
 echo "does .zshrc exist? $(ls $MB_WS/.zshrc)"
 chmod +x "$MB_WS/.zshrc" && . "$MB_WS/.zshrc"
