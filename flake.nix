@@ -35,14 +35,15 @@
             ripgrep
             uv
             gh
+            glibcLocales
           ] ++ systemSpecificPkgs.extraPackages;
           
           shellHook = ''
-          echo "Running on ${system}"
-          echo "ZDOTDIR is set to $ZDOTDIR"
-          which zsh
-          echo "Current shell: $0"
+          export LC_ALL=en_US.UTF-8
+          export LANG=en_US.UTF-8
+          export LANGUAGE=en_US.UTF-8
           export ZDOTDIR="$PWD/shell"
+          
           if ! [ -z "$ZSH_VERSION" ]; then
             echo "Already in Zsh"
           else
