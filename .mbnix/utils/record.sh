@@ -37,3 +37,5 @@ MB_WS
         echo "Recording saved to $output_file"
     fi
 }
+
+alias record="record_terminal"
