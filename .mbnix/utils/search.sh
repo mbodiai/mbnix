@@ -1,4 +1,9 @@
 #!/bin/sh
+if [ -n "$MB_SEARCH" ]; then
+    echo "search already sourced. Run 'unset MB_SEARCH' to reload."
+    return
+fi
+export MB_SEARCH="sourced"
 
 fzf_path_completion() {
     pyclean -e "**/*.pyc" --yes . && pyclean -e "**/__pycache__" --yes .

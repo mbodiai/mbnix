@@ -46,15 +46,6 @@ dependencies = [
 "pytest-asyncio",
 ]
 
-[tool.hatch.envs.default.env-vars]
-
-[tool.hatch.envs.conda]
-type = "conda"
-python = "3.12"
-command = "conda"
-conda-forge = false
-environment-file = "environment.yml"
-prefix = ".venv/"
 
 [tool.hatch.envs.default.scripts]
 test = "pytest -vv --ignore third_party {args:tests}"

@@ -1,0 +1,7 @@
+// Add to settings.json
+{
+  "files.associations": {
+    ".zshrc": "shellscript",
+    ".json5": "json"
+  }
+}

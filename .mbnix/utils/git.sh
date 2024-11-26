@@ -1,5 +1,9 @@
 #! /usr/bin/sh
-
+if [ -n "$MB_GIT" ]; then
+    echo "git already sourced. Run 'unset MB_GIT' to reload."
+    return
+fi
+export MB_GIT="sourced"
 
 git_search_term() {
     # Function to display usage/help message
@@ -57,7 +61,7 @@ git_search_term() {
 
     # Perform the search
    becho "Searching for '$search_term' in diffs (actual content changes) for path '$search_path' with $context_lines lines of context..." | becho -
-    git log --all -p -U"$context_lines" -S "$search_term" -- "$search_path" --date-order | bat --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
+    git log --all -p -U"$context_lines" -S "$search_term" -- "$search_path" --date-order | $BAT --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
 }
 # Function to clean up a submodule and push it to a temporary branch
 git_submodule_clean() {
@@ -170,16 +174,16 @@ git_push_temp() {
     # Iterate over all submodules
     git submodule foreach "
         # Create a temporary branch inside the submodule
-        branch_name="temp_submodule_branch_$(date +%s)"
-       becho "Creating and pushing to branch $branch_name for submodule $name..."
-        git checkout -b "$branch_name"
+        branch_name="temp_submodule_branch_\"$(tfmt +%s)\"
+       becho "Creating and pushing to branch $branch_name for submodule $name...\"
+        git checkout -b \"$branch_name\"
 
         # Add all changes and commit
         git add .
         git commit -m "Updated submodule $name on temporary branch $branch_name"
 
         # Push the temporary branch to the remote
-        git push origin "$branch_name"
+        git push origin \"$branch_name\"
 
         # Return to the original branch
         git checkout -
@@ -197,10 +201,10 @@ git_list_diffs_last_commit() {
     # Fetch logs with filenames and submodule changes, format and sort by timestamp
     git log --submodule --name-only --pretty=format:"%ad" --date=iso |
         awk '/^[0-9]{4}/ {date=$0; next} NF {print date " " $0}' | sort |
-        bat --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
+        $BAT --style=numbers --color=always --theme=1337 --highlight-line 1 -l python -
    becho
     for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ refs/remotes/); do
-        timestamp=$(git log -1 --format="%ci" "$branch")
+        timestamp=$(git log -1 --format="%ci" "$branch" | tfmt)
        becho "$timestamp - $branch" 
     done
 }

@@ -2,6 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    # mbcli.url = "github:mbodiai/mb";
   };
 
   outputs = { self, nixpkgs, flake-utils }:
@@ -28,7 +29,7 @@
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            python310
+            python311
             zsh
             git 
             fzf
@@ -36,21 +37,19 @@
             uv
             gh
             glibcLocales
+
           ] ++ systemSpecificPkgs.extraPackages;
           
           shellHook = ''
-          export LC_ALL=en_US.UTF-8
-          export LANG=en_US.UTF-8
-          export LANGUAGE=en_US.UTF-8
-          export ZDOTDIR="$PWD/shell"
-          
-          if ! [ -z "$ZSH_VERSION" ]; then
-            echo "Already in Zsh"
-          else
-            echo "Switching to Zsh"
-            exec ${pkgs.zsh}/bin/zsh
-            return 0
-          fi
+          export ZDOTDIR="$PWD/.mbnix"
+          if [ -f .mbnix/setup.sh ]; then
+              source .mbnix/setup.sh
+            fi
+            if [ "$SHELL" = "${pkgs.zsh}/bin/zsh" ]; then
+              exec $SHELL
+            else
+              ${pkgs.zsh}/bin/zsh
+            fi
         '';
         };
         packages.default = pkgs.stdenv.mkDerivation {

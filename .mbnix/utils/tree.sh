@@ -1,18 +1,30 @@
 #!/bin/sh
-
-
-# Function t: Lists the directory tree or searches file contents with pass-through for additional args
+if [ -n "$MB_TREE" ]; then
+    echo "Tree already sourced. Run 'unset MB_TREE' to reload."
+    return
+fi
+export MB_TREE="sourced"
 treecmd() {
     show_help() {
-        printf "Usage: t [-t|--timestamps] [@|DEPTH] [DIR] [TERM] [-h|--help]\n" | ${BAT:-cat} -
+        echo "Usage: t [-t|--timestamps] [@|DEPTH] [DIR] [TERM] [-h|--help]"
+        echo "Options:"
+        echo "    -t, --timestamps    Display timestamps for each file."
+        echo "    @                  Show a depth of 2."
+        echo "    DEPTH              The depth to display."
+        echo "    DIR                The directory to display."
+        echo "    TERM               A search term to look for in the directory."
+        echo "    -h, --help          Show this help message."
     }
-    
+    [ "$1" = "--help" ] && show_help
     ensure_cmd() {
-        command -v "$1" >/dev/null 2>&1 || { echo "Required: $1" >&2; return 1; }
+        command -v "$1" >/dev/null 2>&1 || {
+            echo "Required: $1" >&2
+            return 1
+        }
     }
 
     ensure_cmd "tree" || return 1
-    
+
     show_time=false
     depth=2
     dir="."
@@ -21,30 +33,30 @@ treecmd() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            -h|--help)
-                show_help
-                return
-                ;;
-            -t|--timestamps)
-                show_time=true
-                shift
-                ;;
-            @)
-                depth=2
-                shift
-                ;;
-            [0-9]*)
-                depth=$1
-                shift
-                ;;
-            *)
-                if [ -d "$1" ]; then
-                    dir=$1
-                elif [ -n "$1" ]; then
-                    term=$1
-                fi
-                shift
-                ;;
+        -h | --help)
+            show_help
+            return
+            ;;
+        -t | --timestamps)
+            show_time=true
+            shift
+            ;;
+        @)
+            depth=2
+            shift
+            ;;
+        [0-9]*)
+            depth=$1
+            shift
+            ;;
+        *)
+            if [ -d "$1" ]; then
+                dir=$1
+            elif [ -n "$1" ]; then
+                term=$1
+            fi
+            shift
+            ;;
         esac
     done
 
@@ -52,8 +64,9 @@ treecmd() {
         ensure_cmd "rg" || return 1
         rg --with-filename -C 1 "$term" "$dir"
     else
-        cmd="tree -I '__pycache__|*.pyc|*.pyo' -L $depth --dirsfirst -C"
-         [ "$show_time" = true ] && cmd="$cmd -D --timefmt='%B %d %Y %T'"
+        cmd="tree -I '__pycache__|*.pyc|*.pyo' -L $depth --dirsfirst -r -C"
+        # Format timestamp as "Jan 21 3pm"
+        [ "$show_time" = true ] && cmd="$cmd -D --timefmt='%b %d %l%P'"
         eval "$cmd \"$dir\" ${extra_args}"
     fi
 }
@@ -69,15 +82,13 @@ tsearch() {
         ensure_dependency "rg" "ripgrep"
         [ -z "$BAT" ] && echo "Note: 'bat' is not installed. Using 'cat' instead."
         ignore_file=$(mktemp)
-        printf '__pycache__\n*.pyc\n*.pyo\n' > "$ignore_file"
+        printf '__pycache__\n*.pyc\n*.pyo\n' >"$ignore_file"
         trap cleanup EXIT INT TERM
     }
 
     cleanup() {
         rm -f "$ignore_file"
     }
-
-   
 
     show_help() {
         printf "Usage: ts [term] [--tests] [--timestamps]\nOptions:\n    term        A search term to look for within the specified file types (${FILE_TYPES}).\n                Displays a summary of up to ${FILE_LINES} lines.\n    --tests     Include test files (files in 'tests/' directories or prefixed with 'test_').\n    --timestamps Display the modification time for each file.\n    --help, -h  Show this help message.\n" | ${BAT:-cat} -
@@ -105,31 +116,40 @@ tsearch() {
     process_files() {
         mode="$1"
         case "$mode" in
-            "tests")
-                find_files "( -name 'test_*.py' -o -path '*/tests/*.py' )" | 
-                    preview_matching_files
-                ;;
-            "all")
-                find_files "( -name '*.py' -o -name '*.sh' -o -name '*.md' -o -name '*.toml' )" |
-                    preview_matching_files
-                ;;
-            "search")
-                rg --files-with-matches "$TERM_SEARCH" \
-                    --glob '*.py' --glob '*.sh' --glob '*.md' --glob '*.toml' \
-                    --ignore-file "$ignore_file" |
-                    grep -E '\.(py|sh|md|toml)$' |
-                    preview_matching_files ||
-                    printf "No matches found for term '%s'.\n" "$TERM_SEARCH" | ${BAT:-cat} -
-                ;;
+        "tests")
+            find_files "( -name 'test_*.py' -o -path '*/tests/*.py' )" |
+                preview_matching_files
+            ;;
+        "all")
+            find_files "( -name '*.py' -o -name '*.sh' -o -name '*.md' -o -name '*.toml' )" |
+                preview_matching_files
+            ;;
+        "search")
+            rg --files-with-matches "$TERM_SEARCH" \
+                --glob '*.py' --glob '*.sh' --glob '*.md' --glob '*.toml' \
+                --ignore-file "$ignore_file" |
+                grep -E '\.(py|sh|md|toml)$' |
+                preview_matching_files ||
+                printf "No matches found for term '%s'.\n" "$TERM_SEARCH" | ${BAT:-cat} -
+            ;;
         esac
     }
 
     # Parse options
     while [ "$#" -gt 0 ] && [ "$1" != "${1#-}" ]; do
         case "$1" in
-            --timestamps) display_timestamps=true; shift ;;
-            --help|-h) show_help; return ;;
-            *) printf "Unknown option: %s\n" "$1" | ${BAT:-cat} -; return 1 ;;
+        --timestamps)
+            display_timestamps=true
+            shift
+            ;;
+        --help | -h)
+            show_help
+            return
+            ;;
+        *)
+            printf "Unknown option: %s\n" "$1" | ${BAT:-cat} -
+            return 1
+            ;;
         esac
     done
 
@@ -166,18 +186,18 @@ tgit() {
     # Parse options
     while [ $# -gt 0 ]; do
         case "$1" in
-            --timestamps|-t)
-                display_timestamps=true
-                shift
-                ;;
-            --help|-h)
-                printf "Usage: tgit [--timestamps]\nOptions:\n    --timestamps    Display the modification time for each changed file.\n    --help, -h      Show this help message.\n" | ${BAT:-cat} -
-                return
-                ;;
-            *)
-                printf "Unknown option: %s\n" "$1" | ${BAT:-cat} -
-                return 1
-                ;;
+        --timestamps | -t)
+            display_timestamps=true
+            shift
+            ;;
+        --help | -h)
+            printf "Usage: tgit [--timestamps]\nOptions:\n    --timestamps    Display the modification time for each changed file.\n    --help, -h      Show this help message.\n" | ${BAT:-cat} -
+            return
+            ;;
+        *)
+            printf "Unknown option: %s\n" "$1" | ${BAT:-cat} -
+            return 1
+            ;;
         esac
     done
 
@@ -213,6 +233,6 @@ tgit() {
     done
 }
 
-alias t='treecmd'
-alias ts='tsearch'
-alias tg='tgit'
+alias t='treecmd' # tree: Show directory structure with optional depth and search term
+alias ts='tsearch' # tree_search: Search for term in specific file types with timestamps
+alias tg='tgit' # tree_git: Show changes with option for displaying timestamps

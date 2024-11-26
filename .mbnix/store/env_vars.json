@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Environment Variables Configuration Schema",
+  "description": "Schema for managing environment variables related to C++/Build and CUDA/GPU setups.",
+  "type": "object",
+  "properties": {
+    "CXX": {
+      "type": "string",
+      "description": "Path to the C++ compiler executable (e.g., g++).",
+      "default": "/usr/bin/g++",
+      "pattern": "^\\/[^\\s]*$"
+    },
+    "CC": {
+      "type": "string",
+      "description": "Path to the C compiler executable (e.g., gcc).",
+      "default": "/usr/bin/gcc",
+      "pattern": "^\\/[^\\s]*$"
+    },
+    "CMAKE_PREFIX_PATH": {
+      "type": "string",
+      "description": "CMake prefix path for locating dependencies.",
+      "default": "/"
+    },
+    "LD_LIBRARY_PATH": {
+      "type": "string",
+      "description": "Colon-separated list of directories where shared libraries are searched for first.",
+      "default": "/usr/local/lib",
+      "pattern": "^([^:/]+:)*[^:/]+$"
+    },
+    "INCLUDE_PATH": {
+      "type": "string",
+      "description": "Path to include files for the compiler.",
+      "default": "/usr/include",
+      "pattern": "^\\/[^\\s]*$"
+    },
+    "CUDA_HOME": {
+      "type": "string",
+      "description": "Path to the CUDA installation directory.",
+      "default": "/usr/local/cuda",
+      "pattern": "^\\/[^\\s]*$"
+    },
+    "CUDA_PATH": {
+      "type": "string",
+      "description": "Alias for CUDA_HOME, often used interchangeably.",
+      "default": "/usr/local/cuda",
+      "pattern": "^\\/[^\\s]*$"
+    },
+    "NVIDIA_DRIVER_CAPABILITIES": {
+      "type": "string",
+      "description": "Capabilities required by the NVIDIA driver (e.g., all, compute, video).",
+      "default": "all",
+      "enum": [
+        "all",
+        "compute",
+        "video",
+        "graphics",
+        "utility",
+        "display",
+        "nvml",
+        "encode",
+        "decode"
+      ]
+    },
+    "PATH": {
+      "type": "string",
+      "description": "Colon-separated list of directories to search for executables.",
+      "default": "/usr/local/cuda/bin:/usr/bin:/bin",
+      "pattern": "^([^:/]+:)*[^:/]+$"
+    }
+  },
+  "required": [
+    "CXX",
+    "CC",
+    "CMAKE_PREFIX_PATH",
+    "LD_LIBRARY_PATH",
+    "INCLUDE_PATH",
+    "CUDA_HOME",
+    "CUDA_PATH",
+    "NVIDIA_DRIVER_CAPABILITIES",
+    "PATH"
+  ],
+  "additionalProperties": false
+}

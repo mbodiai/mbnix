@@ -1,5 +1,12 @@
-#!/usr/bin/zsh
-
+#!/usr/bin/sh
+# -----------------------------
+# HEADER
+# -----------------------------
+if [ -n "$MB_CPPASTE" ]; then
+    echo "cppaste already sourced. Run 'unset MB_CPPASTE' to reload."
+    return
+fi
+export MB_CPPASTE="sourced"
 # -----------------------------
 # Capture Last Command and Output
 # -----------------------------
