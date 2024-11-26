@@ -379,3 +379,4 @@ export pc
 . "$MB_WS/.mbnix/utils/doctor.sh"
 . "$MB_WS/.mbnix/utils/bench.sh"
 . "$MB_WS/.mbnix/utils/envvars.sh"
+. "$MB_WS/.mbnix/utils/record.sh"
