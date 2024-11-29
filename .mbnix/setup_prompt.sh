@@ -7,8 +7,20 @@
 # ===============================
 # Set default workspace if not set
 # ===============================
+if [ -z "$_MB_SETUP_PROMPT_RUNNING" ]; then
+    export _MB_SETUP_PROMPT_RUNNING=0
+fi
+if [ "$_MB_SETUP_PROMPT_RUNNING" -eq 1 ]; then
+    return
+fi
+export _MB_SETUP_PROMPT_RUNNING=1
 : "${MB_WS:="$HOME/mbnix"}"
 export MB_WS
+if [ -z "$PS1OLD" ]; then
+    export PS1OLD=$PS1
+fi
+
+
 
 
 # ============================================
@@ -255,14 +267,65 @@ toggle_host() {
 }
 
 toggle_minimal() {
+    SET="$1"
+    if [ -n "$SET" ]; then
+        if [ "$SET" -eq 1 ]; then
+            export MINIMAL=true
+            echo "Minimal mode enabled."
+        else
+            export MINIMAL=false
+            echo "Minimal mode disabled."
+        fi
+        update_prompt
+        return
+    fi
     if [ "$MINIMAL" = true ]; then
-        MINIMAL=false
+        export MINIMAL=false
         echo "Minimal mode disabled."
     else
-        MINIMAL=true
+        export MINIMAL=true
         echo "Minimal mode enabled."
     fi
     update_prompt
+}
+mbprompthelp() {
+        echo " "
+        echo "${PINK_BOLD}Usage:${RESET} ${PINK_BOLD}mb prompt${RESET} [${GOLD}on|off${RESET}${LIGHT_BLUE}|py|ros|git|color|host${RESET}${LIGHT_CYAN}|short|long]${RESET}"
+        echo " "
+    }
+toggle_prompt() {
+    
+        subcmd="$1"
+        if [ -n "$subcmd" ] && [ "$subcmd" = "--help" ] || [ "$subcmd" = "-h" ]; then
+            mbprompthelp
+            return
+        fi
+        if [ "$subcmd" = "on" ]; then
+            export MB_PROMPT=1
+        elif [ "$subcmd" = "off" ]; then
+            unset MB_PROMPT
+        elif [ "$subcmd" = "py" ]; then
+            toggle_python
+        elif [ "$subcmd" = "ros" ]; then
+            toggle_ros
+        elif [ "$subcmd" = "git" ]; then
+            toggle_git
+        elif [ "$subcmd" = "color" ]; then
+            toggle_colors
+        elif [ "$subcmd" = "host" ]; then
+            toggle_host
+        elif [ "$subcmd" = "short" ]; then
+            toggle_minimal 1
+        elif [ "$subcmd" = "long" ]; then
+            toggle_minimal 0
+        else
+            echo "${RED_BOLD}ERROR: INVALID ARGUMENT to PROMPT${RESET}"
+            echo " "
+            echo "  ${RED}Argument '$subcmd' not recognized.${RESET}"
+            echo "  ${PINK}Use 'mb prompt --help' for more information.${RESET}"
+            echo " "
+        fi
+        update_prompt
 }
 # ============================================
 # Aliases for Toggling
@@ -279,8 +342,15 @@ alias toggleminimal='toggle_minimal'
 # ============================================
 # Construct the Prompt
 # ============================================
-
+if [ -z "$_PROMPT_RUNNING" ]; then
+    export _PROMPT_RUNNING=0
+fi
 construct_prompt() {
+    # Guard against recursion
+    if [ "$_PROMPT_RUNNING" = "1" ]; then
+        return
+    fi
+    export _PROMPT_RUNNING=1
     local git_info ros_info py_env cwd
     local prompt_parts=()
 
@@ -318,6 +388,7 @@ construct_prompt() {
     local joined
     joined=$(IFS="$SEPARATOR"; echo "${prompt_parts[*]}")
     PS1="${joined} ${SHELL_PROMPT}"
+    unset _PROMPT_RUNNING
 }
 construct_rprompt() {
   echo " "
@@ -328,23 +399,29 @@ construct_rprompt() {
 # ============================================
 
 update_prompt() {
-    construct_prompt
+    if [ -n "$MB_PROMPT" ]; then
+        construct_prompt
+    else
+        PS1=$PS1OLD
+    fi
 }
 
 # ============================================
 # Hook into Shell's Prompt Update Mechanism
 # ============================================
-
-if [ -n "$ZSH_VERSION" ]; then
-    # For Zsh, use precmd hook
-    precmd() {
-        update_prompt
-    }
-elif [ -n "$BASH_VERSION" ]; then
-    # For Bash, use PROMPT_COMMAND
-    PROMPT_COMMAND=update_prompt
+if [ -n "$MB_PROMPT" ]; then
+    if [ -n "$ZSH_VERSION" ]; then
+        # For Zsh, use precmd hook
+        precmd() {
+            update_prompt
+        }
+    elif [ -n "$BASH_VERSION" ]; then
+        # For Bash, use PROMPT_COMMAND
+        PROMPT_COMMAND=update_prompt
+    fi
+    # Initialize the prompt on script load
+    update_prompt
 fi
 
-# Initialize the prompt on script load
-update_prompt
-
+export get_python_env
+unset _MB_SETUP_PROMPT_RUNNING

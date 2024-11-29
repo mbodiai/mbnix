@@ -1,15 +1,17 @@
 # ==========================================
 # Copied to avoid import shell Configurations
 # ==========================================
+if [ -z $_MB_SETUP_EXTRAS_RUNNING ]; then
+    export _MB_SETUP_EXTRAS_RUNNING=0
+fi
+if [ $_MB_SETUP_EXTRAS_RUNNING -eq 1 ]; then
+    return
+fi
+export _MB_SETUP_EXTRAS_RUNNING=1
 get_user_shell() {
     ps -p $$ -o comm=
 }
 
-if [ -n "$MB_EXTRAS" ]; then
-    echo "Environment already sourced. Run 'unset MB_EXTRAS' to reload."
-    return
-fi
-export MB_EXTRAS="sourced"
 TERM=xterm-256color
 # Function to use bat for pretty help pages
 man_command() {
@@ -131,10 +133,12 @@ install_dependency() {
         if command -v apt-get >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y "$pkg"
-        elif command -v yum >/dev/null 2>&1; then
-            sudo yum install -y "$pkg"
-        elif command -v dnf >/dev/null 2>&1; then
-            sudo dnf install -y "$pkg"
+        elif command -v cargo >/dev/null 2>&1; then
+            cargo install "$pkg"
+        elif command -v pipx >/dev/null 2>&1; then
+            pipx install "$pkg"
+        elif command -v python -m pipx >/dev/null 2>&1; then
+            python -m pipx install "$pkg"
         elif command -v python3 -m pipx >/dev/null 2>&1; then
             pipx install "$pkg"
         else
@@ -150,6 +154,33 @@ install_dependency() {
     fi
 }
 
+install_bat() {
+    if command -v bat >/dev/null 2>&1 || command -v batcat >/dev/null 2>&1; then
+        return 0
+    fi
+
+    printf "Installing bat...\n"
+    
+    if [ "$(uname)" = "Linux" ]; then
+        if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update
+            # Correct package name for Ubuntu is 'bat'
+            if sudo apt-get install -y bat; then
+                # bat command gets installed as 'batcat' on Ubuntu
+                mkdir -p "$HOME/.local/bin"
+                ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
+                export PATH="$HOME/.local/bin:$PATH"
+                return 0
+            fi
+        fi
+    fi
+
+    # Verify installation
+    if ! command -v bat >/dev/null 2>&1 && ! command -v batcat >/dev/null 2>&1; then
+        printf "Failed to install bat/batcat\n" >&2
+        return 1
+    fi
+}
 # Initial setup: Check and install dependencies
 initial_setup() {
     # List of dependencies: command:package
@@ -157,6 +188,7 @@ initial_setup() {
     echo "$dependencies" | tr ' ' '\n' | while IFS=: read -r cmd pkg; do
         case "$cmd" in
         bat)
+            install_bat || echo "Please install bat manually"
             continue
             ;;
         pyclean)
@@ -312,36 +344,33 @@ deletevenv() {
         echo "No virtual environment found."
     fi
 }
-is_in_conda_env() {
-    [ -n "$CONDA_DEFAULT_ENV" ]
-}
 
-is_in_virtualenv() {
-    [ -n "$VIRTUAL_ENV" ]
-}
 
-deactivate() {
-    [ "$is_in_conda_env" ] && conda deactivate
-    [ "$is_in_virtualenv" ] && deactivate
+deactivate_cmd() {
+    [ -n "$CONDA_DEFAULT_ENV" ] && conda deactivate && echo "Deactivated conda environment." && return
+    [ -n "$HATCH_ENV_ACTIVE" ] && deactivate && echo "Deactivated hatch environment." && return
+    [ -n "$VIRTUAL_ENV" ] && conda deactivate && echo "Deactivated virtual environment."
+
     if [ -n "$VIRTUAL_ENV" ]; then
         unset VIRTUAL_ENV
-        PATH=$(echo "$PATH" | tr ":" "\n" | grep -v "$VIRTUAL_ENV" | tr "\n" ":" | sed 's/:$//')
-        export PATH
-        hash -r
-        echo "Deactivated virtual environment."
+        unset HATCH_ENV_ACTIVE
     fi
 
 }
-activate() {
+activate_cmd() {
     if [ -d ".venv" ] && [ -f ".venv/bin/activate" ]; then
+        echo "Activating virtual environment in .venv..."
         . .venv/bin/activate
     elif [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+        echo "Activating virtual environment in venv..."
         . venv/bin/activate
     elif [ -d "env" ] && [ -f "env/bin/activate" ]; then
+        echo "Activating virtual environment in env..."
         . env/bin/activate
     else
-        env_dir=$(find_virtualenv) && [ -n "$env_dir" ] && . "$env_dir/bin/activate" && return
         echo "No virtual environment found in parent directories."
+        env_dir=$(find_virtualenv) && [ -n "$env_dir" ] && . "$env_dir/bin/activate" && return
+    
         if [ -z "$1" ]; then
             echo "Installing default Python 3.11. Add a Python version (e.g., 3.11) to create a different environment."
             set -- "3.11"
@@ -355,8 +384,24 @@ activate() {
         fi
     fi
 }
-alias a="activate"           # Activate virtual environment
-alias d="deactivate"         # Deactivate virtual environment
+# Store Conda default environment if not set
+export CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV:-"base"}
+
+
+activate_last_conda_env() {
+    if [ -n "$CONDA_LAST_ENV" ]; then
+        echo "Activating last Conda environment: $CONDA_LAST_ENV"
+        conda activate "$CONDA_LAST_ENV"
+    else
+        echo "Falling back to default Conda environment: $CONDA_DEFAULT_ENV"
+        conda activate "$CONDA_DEFAULT_ENV"
+    fi
+}
+
+
+alias ac='activate_last_conda_env' # Activate last Conda environment
+alias a="activate_cmd"           # Activate virtual environment
+alias d="deactivate_cmd"         # Deactivate virtual environment
 alias pylink="uvlinkcommand" # Link to virtual environment
 alias unlink="uvunlink"      # Unlink virtual environment
 alias dv="deletevenv"        # Delete virtual environment
@@ -378,5 +423,5 @@ export pc
 . "$MB_WS/.mbnix/utils/git.sh"
 . "$MB_WS/.mbnix/utils/doctor.sh"
 . "$MB_WS/.mbnix/utils/bench.sh"
-. "$MB_WS/.mbnix/utils/envvars.sh"
 . "$MB_WS/.mbnix/utils/record.sh"
+unset _MB_SETUP_EXTRAS_RUNNING

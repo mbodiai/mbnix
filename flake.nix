@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # mbcli.url = "github:mbodiai/mb";
+    # mbcli.url = "github:mboediai/mb";
   };
 
   outputs = { self, nixpkgs, flake-utils }:
@@ -30,45 +30,55 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             python311
+            python311Packages.pip
             zsh
+            bash
             git 
             fzf
             ripgrep
             uv
             gh
             glibcLocales
-
           ] ++ systemSpecificPkgs.extraPackages;
           
           shellHook = ''
           export ZDOTDIR="$PWD/.mbnix"
           if [ -f .mbnix/setup.sh ]; then
+              source .mbnix
               source .mbnix/setup.sh
             fi
             if [ "$SHELL" = "${pkgs.zsh}/bin/zsh" ]; then
               exec $SHELL
             else
+              export SHELL=$(which zsh)
               ${pkgs.zsh}/bin/zsh
+              source .mbnix/.zshrc
             fi
         '';
         };
         packages.default = pkgs.stdenv.mkDerivation {
-          name = "mbenv";
+          name = "mb";
           src = ./.;
           buildInputs = with pkgs; [ 
+            python311
+            python311Packages.pip
             zsh
+            bash
             git 
             fzf
             ripgrep
             gh
+            uv
+            glibcLocales
           ] ++ systemSpecificPkgs.extraPackages;
 
           installPhase = ''
             mkdir -p $out/bin
             echo "System: ${system}" > $out/bin/info
             chmod +x $out/bin/info
-            export ZDOTDIR="$PWD"
+            export ZDOTDIR="$PWD/.mbnix"
             exec ${pkgs.zsh}/bin/zsh
+            source .mbnix/.zshrc
           '';
         };
       });

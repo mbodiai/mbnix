@@ -1,9 +1,13 @@
 #!/bin/sh
-if [ -n "$MB_SETUP" ] && [ "$MB_SHLVL" -eq "$SHLVL" ]; then
-    echo "MB_SETUP already sourced. Run 'unset MB_SETUP' to reload."
+if [ -z "$_SETUP_MBWS_RUNNING" ]; then
+    export _SETUP_MBWS_RUNNING=0
+fi
+
+if [ "$_SETUP_MBWS_RUNNING" -eq 1 ]; then
     return
 fi
-export MB_SETUP="sourced"
+export _SETUP_MBWS_RUNNING=1
+
 git config --global submodule.recurse true
 
 # ================================
@@ -110,37 +114,48 @@ case "$USER_SHELL" in
 zsh)
     SHELL_CONFIG="$HOME/.zshrc"
 
-    [ -f "$MB_WS/.mbnix/.zshrc" ] && [ -z $MB_RC ] && . "$MB_WS/.mbnix/.zshrc"
+    if [ -f "$MB_WS/.mbnix/.zshrc" ] && ! grep -q "source $MB_WS/.mbnix/.zshrc" < "$SHELL_CONFIG"; then
+        echo "source $MB_WS/.mbnix/.zshrc" >>"$SHELL_CONFIG"
+    fi
     ;;
 bash)
     SHELL_CONFIG="$HOME/.bashrc"
-    [ -f "$MB_WS/.mbnix/.bashrc" ] && [ -z $MB_RC ] && . "$MB_WS/.mbnix/.bashrc"
+    if [ -f "$MB_WS/.mbnix/.bashrc" ] && ! grep -q "source $MB_WS/.mbnix/.bashrc" <  "$SHELL_CONFIG" ; then
+        echo "source $MB_WS/.mbnix/.bashrc" >>"$SHELL_CONFIG"
+    fi
     ;;
 *)
-    SHELL_CONFIG="$HOME/.profile"
-    [ -f "$MB_WS/.mbnix/.zshrc" ] && [ -z $MB_RC ] && . "$MB_WS/.mbnix/.zshrc"
+    echo "Unsupported shell: $USER_SHELL"
+    return 1
     ;;
 esac
 
-if ! grep -q ". $MB_WS/.mbnix/setup.sh" "$SHELL_CONFIG"; then
-    echo ". $MB_WS/.mbnix/setup.sh" >>"$SHELL_CONFIG"
-fi
+
 
 if [ -z "$MB_WS" ]; then
     export MB_WS="$HOME/mbnix"
 fi
 
-if [ -f "$MB_WS/.mbnix/setup_mbnix.sh" ] || ! [ "$MB_SHLVL" -eq "$SHLVL" ]; then
-    . "$MB_WS/.mbnix/setup_mbnix.sh"
+if [ -f "$MB_WS/.mbnix/utils/colors.sh" ]; then
+    . "$MB_WS/.mbnix/utils/colors.sh"
 fi
 
-if [ -f "$MB_WS/.mbnix/setup_prompt.sh" ] || ! [ "$MB_SHLVL" -eq "$SHLVL" ]; then
+if [ -f "$MB_WS/.mbnix/setup_prompt.sh" ]; then
     . "$MB_WS/.mbnix/setup_prompt.sh"
 fi
 
-alias als="list_aliases" # List all aliases and their descriptions.
-alias rs="mb reset &&  . \$MB_WS/.mbnix/setup.sh" # Reload the mb shell configuration.
+if [ -f "$MB_WS/.mbnix/setup_mbnix.sh" ]; then
+    . "$MB_WS/.mbnix/setup_mbnix.sh"
+fi
+
+
+
 if [ -n "$MB_EXTRAS" ] || [ "$1" = "extras" ]; then
+    echo "Sourcing extras"
     . "$MB_WS/.mbnix/utils/extras.sh"
 fi
-export MB_SHLVL=$SHLVL
+
+
+alias als="list_aliases" # List all aliases and their descriptions.
+alias rs="mb reset &&  . \$MB_WS/.mbnix/setup.sh" # Reload the mb shell configuration.
+unset _SETUP_MBWS_RUNNING

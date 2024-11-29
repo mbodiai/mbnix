@@ -22,98 +22,78 @@ LIGHT_CYAN_BOLD=$'\033[01;38;5;87m'
 CYAN_BOLD=$'\033[01;36m'
 
 
-
-# Function to display error messages
-oops() {
-    printf "%b\n" "${RED_BOLD}Error:${RESET} $1" >&2
+clear_line() {
+    # Fallback if tput not available
+    if command -v tput >/dev/null 2>&1; then
+        tput el >/dev/null 2>&1
+    fi
+    # Always use ANSI escape as backup
+    printf "\r\033[K"
 }
-warn() {
-    printf "%b\n" "${YELLOW}Warning:${RESET} $1" >&2
-}
 
-# Validate MB_WS environment variable
-if [ -z "$MB_WS" ]; then
-    warn "MB_WS is not set. Setting to $HOME/MBNIX."
-fi
+animate_message() {
+    # Guard against recursive calls and check shell
+    if [ -n "$_ANIMATE_RUNNING" ]; then
+        return 0
+    fi
+    export _ANIMATE_RUNNING=1
 
-# Validate MB_COLOR environment variable
-validate_mb_color() {
-    if [ -z "$MB_COLOR" ]; then
-        MB_COLOR="PINK_BOLD"  # Default color name
+    # Handle zsh-specific cleanup
+    if [ -n "$ZSH_VERSION" ]; then
+        # Temporarily disable zsh autosuggestions
+        _zsh_autosuggest_disable 2>/dev/null
+        trap '_zsh_autosuggest_enable 2>/dev/null; unset _ANIMATE_RUNNING; return' EXIT INT TERM
+    else
+        trap 'unset _ANIMATE_RUNNING; return' EXIT INT TERM
     fi
 
-    case "$MB_COLOR" in
-        RED|GREEN|PINK|CYAN|YELLOW|BLUE|MAGENTA|PINK_BOLD|CYAN_BOLD)
-            eval "MB_COLOR=\"\$$MB_COLOR\""
-            ;;
-        *$'\033'*)
-            # MB_COLOR is already an escape sequence; accept it
-            ;;
-        *)
-            oops "Invalid MB_COLOR value: $MB_COLOR. Must be a valid color name or escape code."
-            MB_COLOR="$PINK_BOLD"  # Fallback to default escape code
-            ;;
-    esac
-}
-
-
-# Adjusted animate_message function with animation flag
-animate_message() {
     message="${1:-}"
     sleeptime="${2:-}"
     color="${3:-}"
     startat="${4:-1}"
-    animate_msg="${5:-1}"  # 1 to animate message, 0 to display instantly
+    animate_msg="${5:-1}"
 
     # Accelerated delays
-    delay=0.05       # Speed up character display
-    dots_delay=0.1   # Speed up dots animation
+    delay=0.015
+    dots_delay=0.03
     max_dots=3
 
-    # Display the message
+    # Clear buffer and line completely
+    clear_line
+    printf "\r\033[K"
+    
     printf "%b" "$color"
     if [ "$animate_msg" -eq 1 ]; then
-        # Animate message one letter at a time
         i="$startat"
-        message_length=$(printf '%s' "$message" | wc -c)
+        message_length=${#message}
         while [ "$i" -le "$message_length" ]; do
-            char=$(printf '%s' "$message" | cut -c "$i")
-            printf "%b" "$char"
+            printf "%b" "${message:$((i-1)):1}"
             sleep "$delay"
             i=$((i + 1))
         done
     else
-        # Display message instantly
         printf "%b" "$message"
     fi
 
-    # Animate dots after the message
-    end_time=$(( $(date +%s) + sleeptime ))
+    # Rest of animation remains unchanged
+    end_time=$(echo "$(date +%s.%N) + $sleeptime" | bc)
     dot_count=0
-    while [ "$(date +%s)" -lt "$end_time" ]; do
+    while [ "$(echo "$(date +%s.%N) < $end_time" | bc)" -eq 1 ]; do
         dots=""
-        num_dots=$(( (dot_count % max_dots) + 1 ))
+        num_dots=$(((dot_count % max_dots) + 1))
         j=1
         while [ "$j" -le "$num_dots" ]; do
             dots="$dots."
             j=$((j + 1))
         done
-        printf "\r%b%b%b%b" "$color" "$message" "$dots" "$RESET"
+        printf "\r\033[K%b%b%b%b" "$color" "$message" "$dots" "$RESET"
         sleep "$dots_delay"
         dot_count=$((dot_count + 1))
     done
-    printf "%b\n" "$RESET"
+    printf "\r\033[K%b%b\n" "$color" "mb environment reset. $RESET"
+
+    # Re-enable zsh features if needed
+    [ -n "$ZSH_VERSION" ] && _zsh_autosuggest_enable 2>/dev/null
+    unset _ANIMATE_RUNNING
 }
 
-# Animate both message and dots
-animate_message "building your workspace" 1 "$GOLD_BOLD" 1 1
-
-# Display message instantly, animate only dots
-MB_COLOR="$COLOR2"
-animate_message "from mbodi ai" 1 "$PINK_BOLD" 1 0
-
-# Export color variables for use in other scripts or prompts
-export MB_COLOR RESET RED RED_BOLD GREEN GREEN_BOLD \
-       PINK PINK_BOLD YELLOW YELLOW_BOLD BLUE BLUE_BOLD \
-       MAGENTA CYAN LIGHT_CYAN LIGHT_CYAN_BOLD CYAN_BOLD \
-       GOLD GOLD_BOLD

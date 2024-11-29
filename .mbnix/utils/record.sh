@@ -1,7 +1,4 @@
-if [ -n "$MB_RECORD" ]; then
-    echo "record already sourced. Run 'unset MB_RECORD' to reload."
-    return
-fi
+#!/bin/sh
 
 record_terminal() {
     # Ensure the directories for pipx and bin are set up

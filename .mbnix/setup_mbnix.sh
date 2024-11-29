@@ -1,7 +1,17 @@
 #!/bin/sh
+# ===============================
+# mbnix guard
+# ===============================
+if [ -z "$_SETUP_MBNIX_RUNNING" ]; then
+    export _SETUP_MBNIX_RUNNING=0
+fi
+if [ "$_SETUP_MBNIX_RUNNING" -eq 1 ]; then
+    return
+fi
+export _SETUP_MBNIX_RUNNING=1
 
 # ===============================
-# MBNIX Configuration
+# mb Configuration
 # ===============================
 GOLD=$'\033[38;5;223m'
 GOLD_BOLD=$'\033[01;38;5;223m'
@@ -16,6 +26,8 @@ YELLOW=$'\033[33m'
 YELLOW_BOLD=$'\033[01;33m'
 BLUE=$'\033[34m'
 BLUE_BOLD=$'\033[01;34m'
+LIGHT_BLUE=$'\033[38;5;39m'
+LIGHT_BLUE_BOLD=$'\033[01;38;5;39m'
 MAGENTA=$'\033[35m'
 CYAN=$'\033[36m'
 LIGHT_CYAN=$'\033[38;5;87m'
@@ -28,137 +40,44 @@ warn() {
 
 # Validate MB_WS environment variable
 if [ -z "$MB_WS" ]; then
-    warn "MB_WS is not set. Setting to $HOME/MBNIX."
-    export MB_WS="$HOME/mbnix"
+    warn "MB_WS is not set. Setting to $HOME/mb."
+    export MB_WS="$HOME/mb"
 fi
-
-# Validate MB_COLOR environment variable
-validate_mb_color() {
-    if [ -z "$MB_COLOR" ]; then
-        MB_COLOR="PINK_BOLD" # Default color name
-    fi
-
-    case "$MB_COLOR" in
-    RED | GREEN | PINK | CYAN | YELLOW | BLUE | MAGENTA | PINK_BOLD | CYAN_BOLD)
-        eval "MB_COLOR=\"\$$MB_COLOR\""
-        ;;
-    *$'\033'*)
-        # MB_COLOR is already an escape sequence; accept it
-        ;;
-    *)
-        oops "Invalid MB_COLOR value: $MB_COLOR. Must be a valid color name or escape code."
-        MB_COLOR="$PINK_BOLD" # Fallback to default escape code
-        ;;
-    esac
-}
-
-# Adjusted animate_message function with animation flag
-animate_message() {
-    message="${1:-}"
-    sleeptime="${2:-}"
-    color="${3:-}"
-    startat="${4:-1}"
-    animate_msg="${5:-1}" # 1 to animate message, 0 to display instantly
-
-    # Accelerated delays
-    delay=0.05     # Speed up character display
-    dots_delay=0.1 # Speed up dots animation
-    max_dots=3
-
-    # Display the message
-    printf "%b" "$color"
-    if [ "$animate_msg" -eq 1 ]; then
-        # Animate message one letter at a time
-        i="$startat"
-        message_length=$(printf '%s' "$message" | wc -c)
-        while [ "$i" -le "$message_length" ]; do
-            char=$(printf '%s' "$message" | cut -c "$i")
-            printf "%b" "$char"
-            sleep "$delay"
-            i=$((i + 1))
-        done
-    else
-        # Display message instantly
-        printf "%b" "$message"
-    fi
-
-    # Animate dots after the message
-    end_time=$(($(date +%s) + sleeptime))
-    dot_count=0
-    while [ "$(date +%s)" -lt "$end_time" ]; do
-        dots=""
-        num_dots=$(((dot_count % max_dots) + 1))
-        j=1
-        while [ "$j" -le "$num_dots" ]; do
-            dots="$dots."
-            j=$((j + 1))
-        done
-        printf "\r%b%b%b%b" "$color" "$message" "$dots" "$RESET"
-        sleep "$dots_delay"
-        dot_count=$((dot_count + 1))
-    done
-    printf "%b\n" "$RESET"
-}
-
 # ================================
-# Source utility functions
-# ================================
-MB_INSTALL_URL="https://mbodi.ai/install.sh"
-
-oops() {
-    echo "${PINK_BOLD}Error:${RESET} $1" >&2
-    echo "Did you install mbnix?"
-    echo "Run: curl -L $MB_INSTALL_URL | sh"
-    exit 1
-}
-
-source_util_post() {
-    SCRIPT_PATH="$1"
-    if [ -f "$SCRIPT_PATH" ]; then
-        # shellcheck source=/dev/null
-        . "$SCRIPT_PATH" || oops "Could not source '$SCRIPT_PATH'."
-    else
-        oops "Script '$SCRIPT_PATH' not found."
-    fi
-}
-
-if [ -z "$MB_SOURCED" ]; then
-    animate_message "building your workspace" 1 "$GOLD_BOLD" 1 1
-    animate_message "from mbodi ai" 1 "$PINK_BOLD" 1 0
-    export MB_SOURCED=1
-fi
-
-# ================================
-# Main mbnix command
+# Main mb command
 # ================================
 mbcmd() {
     mbhelp() {
         echo
         echo "${PINK_BOLD}mb${RESET} (beta) - Package python, cpp, ros, and more in a single, declarative workspace."
         echo " "
-        echo "${LIGHT_CYAN_BOLD}USAGE:${RESET}"
+        echo "${WHITE_BOLD}USAGE:${RESET}"
         echo "  ${PINK_BOLD}mb${RESET} ${GOLD}[COMMAND]${RESET} [flags]"
         echo
-        echo "${LIGHT_CYAN_BOLD}COMMANDS:${RESET}"
-        echo "  ${GOLD_BOLD}shell${RESET}         Enter the mbnix shell"
-        echo "  ${GOLD_BOLD}mbhelp${RESET}          Display this mbhelp message"
-        echo "  ${GOLD_BOLD}reinstall${RESET}     Reinstall mbnix"
-        echo "  ${GOLD_BOLD}update${RESET}        Update mbnix"
-        echo "  ${GOLD_BOLD}env${RESET}           ${PINK}[py|cpp|ros|cuda|all]${RESET} Display essential environment variables"
-        echo "  ${GOLD_BOLD}reset${RESET}         Unset mbnix environment variables except MB_WS"
-        echo "  ${GOLD_BOLD}list${RESET}          List all available commands"
+        echo "${WHITE_BOLD}COMMANDS:${RESET}"
+        echo "  ${GOLD_BOLD}shell${RESET}         Enter the mb shell"
+        echo "  ${GOLD_BOLD}help${RESET}          Display this mbhelp message"
+        echo "  ${GOLD_BOLD}reinstall${RESET}     Reinstall mb"
+        # echo "  ${GOLD_BOLD}update${RESET}        Update mb"
+        echo "  ${GOLD_BOLD}env${RESET}       ${PINK}[py|cpp|ros|cuda|all]${RESET} Display essential environment variables"
+        echo "  ${GOLD_BOLD}reset${RESET}         Unset mb environment variables except MB_WS"
+        # echo "  ${GOLD_BOLD}doctor${RESET}        Run the mb doctor"
+        # echo "  ${GOLD_BOLD}search${RESET}        Search for packages in the mb workspace"
+        echo "  ${GOLD_BOLD}extras${RESET}        Install extra packages in the mb workspace"
+        echo "  ${GOLD_BOLD}switch${RESET}        Switch between different mb workspaces"
+        echo "  ${GOLD_BOLD}prompt${RESET}        Quick prompt toggles"
         echo
-        echo "${LIGHT_CYAN_BOLD}FLAGS:${RESET}"
-        echo "  ${PINK}--mbhelp${RESET}        Show mbhelp for the command"
-        echo "  ${PINK}--version${RESET}     Show mbnix version"
+        echo "${WHITE_BOLD}FLAGS:${RESET}"
+        echo "  ${PINK}--help | -h${RESET}        Show help for the command"
+        echo "  ${PINK}--version${RESET}          Show mb version"
         echo
-        echo "${LIGHT_CYAN_BOLD}EXAMPLES:${RESET}"
-        echo "  ${GOLD_BOLD}mb shell${RESET}               Enter the mbnix shell"
-        echo "  ${GOLD_BOLD}mb env${RESET} cuda             Show CUDA-related environment variables"
-        echo "  ${GOLD_BOLD}mb reset${RESET}                Reset all mbnix environment variables"
+        echo "${WHITE_BOLD}EXAMPLES:${RESET}"
+        echo "  ${GOLD_BOLD}mb shell${RESET}       Enter the mb shell"
+        echo "  ${GOLD_BOLD}mb env${RESET} cuda    Show CUDA-related environment variables"
+        echo "  ${GOLD_BOLD}mb reset${RESET}       Reset all mb environment variables except MB_WS"
         echo
-        echo "${LIGHT_CYAN_BOLD}LEARN MORE:${RESET}"
-        echo "  Visit the mbnix GitHub repository: ${GOLD_BOLD}https://github.com/mbodiai/mbpy.git${RESET}"
+        echo "${WHITE_BOLD}LEARN MORE:${RESET}"
+        echo "  Visit the mb GitHub repository: ${GOLD_BOLD}https://github.com/mbodiai/mb.git${RESET}"
         echo
     }
 
@@ -169,150 +88,53 @@ mbcmd() {
             echo "${PINK_BOLD}Already in a nix shell.${RESET}"
         fi
     }
+ 
 
-    list_envs() {
-        mbhelp_env() {
-            echo
-            echo "${PINK_BOLD}Usage:${RESET} ${PINK_BOLD}mb env${RESET} ${GOLD_BOLD}{extras|py|cpp|ros|cuda|all}${RESET}"
-            echo
-        }
-
-        list_env_py() {
-            echo
-            echo "${PINK_BOLD}Python/Conda environment variables:${RESET}"
-            echo "------------------------------------"
-            env | grep -iE "PYTHON|VIRTUAL_ENV|CONDA|PIP|PATH" || echo "No Python/Conda environment variables set."
-
-            for var in PYTHONPATH VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV; do
-                if printenv "$var" >/dev/null 2>&1; then
-                    echo "$var=$(printenv "$var")"
-                else
-                    echo "$var="
-                fi
-            done
-
-            if command -v python3 >/dev/null 2>&1; then
-                echo "Python executable: $(which python3)"
-            else
-                echo "Python executable: Not found"
-            fi
-            echo
-        }
-
-        list_env_cpp() {
-            echo
-            echo "${GOLD_BOLD}C++/Build environment variables:${RESET}"
-            echo "--------------------------------"
-            env | grep -iE "CXX|CC|CMAKE|MAKE|BUILD|LD_LIBRARY|INCLUDE" || echo "No C++/Build environment variables set."
-
-            for var in CXX CC CMAKE_PREFIX_PATH LD_LIBRARY_PATH INCLUDE_PATH; do
-                if printenv "$var" >/dev/null 2>&1; then
-                    echo "$var=$(printenv "$var")"
-                else
-                    echo "$var="
-                fi
-            done
-            echo
-        }
-
-        list_env_ros() {
-            echo
-            echo "${LIGHT_CYAN_BOLD}ROS2 environment variables:${RESET}"
-            echo "---------------------------"
-            env | grep -iE "ROS|AMENT|COLCON|GAZEBO|CYCLONE" || echo "No ROS2 environment variables set."
-
-            for var in ROS_DISTRO ROS_VERSION ROS_PACKAGE_PATH AMENT_PREFIX_PATH; do
-                if printenv "$var" >/dev/null 2>&1; then
-                    echo "$var=$(printenv "$var")"
-                else
-                    echo "$var="
-                fi
-            done
-            echo
-        }
-
-        list_env_cuda() {
-            echo
-            echo "${BLUE_BOLD}CUDA/GPU environment variables:${RESET}"
-            echo "--------------------------------"
-            env | grep -iE "CUDA|NVCC|NVIDIA|GPU|NCCL|TENSORRT" || echo "No CUDA environment variables set."
-
-            for var in CUDA_HOME CUDA_PATH NVIDIA_DRIVER_CAPABILITIES; do
-                if printenv "$var" >/dev/null 2>&1; then
-                    echo "$var=$(printenv "$var")"
-                else
-                    echo "$var="
-                fi
-            done
-
-            echo "NVIDIA GPU Information:"
-            if command -v nvidia-smi >/dev/null 2>&1; then
-                # Run nvidia-smi and ensure unique lines
-                nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader 2>/dev/null | sort | uniq || echo "No NVIDIA GPUs found."
-            else
-                echo "nvidia-smi not found. Unable to query GPU information."
-            fi
-            echo
-        }
-
-        list_env_all() {
-            list_env_py
-            echo
-            echo "---"
-            echo
-            list_env_cpp
-            echo
-            echo "---"
-            echo
-            list_env_ros
-            echo
-            echo "---"
-            echo
-            list_env_cuda
-            echo
-        }
-
-        case "$1" in
-        py | python)
-            list_env_py
-            ;;
-        cpp)
-            list_env_cpp
-            ;;
-        ros)
-            list_env_ros
-            ;;
-        cuda)
-            list_env_cuda
-            ;;
-        all)
-            list_env_all
-            ;;
-        mbhelp | *)
-            mbhelp_env
-            ;;
-        esac
-    }
-
-    if [ -z "$1" ]; then
+    cmd="$1"
+    first_arg="$1"
+    subcmd="$2"
+    if [ "$cmd" = "--help" ] || [ "$cmd" = "-h" ] || [ "$cmd" = "help" ]; then
         mbhelp
-    elif [ "$1" = "shell" ]; then
+        cmd="$2"
+        subcmd="$3"
+    fi
+
+    if [ -z "$first_arg" ]; then
+        mbhelp
+    elif [ "$cmd" = "shell" ]; then
         shell
-    elif [ "$1" = "mbhelp" ]; then
+    elif [ "$cmd" = "help" ] || [ "$cmd" = "--help" ] || [ "$cmd" = "-h" ]; then
         mbhelp
-    elif [ "$1" = "reinstall" ]; then
-        echo "${GOLD_BOLD}Installing mbnix...${RESET} from $MB_INSTALL_URL"
-        curl -L "$MB_INSTALL_URL" | sh || oops "Failed to reinstall mbnix."
-    elif [ "$1" = "update" ]; then
-        echo "${GOLD_BOLD}Updating mbnix...${RESET}"
-        curl -L "$MB_INSTALL_URL" | sh || oops "Failed to update mbnix."
-    elif [ "$1" = "reset" ]; then
-        echo " "
-        echo "${PINK}Unsetting mbnix environment variables...${RESET}"
-        echo " "
+        return
+    elif [ "$cmd" = "reinstall" ]; then
+        echo "${GOLD_BOLD}Installing mb...${RESET} from $MB_INSTALL_URL"
+        curl -L "$MB_INSTALL_URL" | sh || oops "Failed to reinstall mb."
+    elif [ "$cmd" = "update" ]; then
+        echo "${GOLD_BOLD}Updating mb...${RESET}"
+        curl -L "$MB_INSTALL_URL" | sh || oops "Failed to update mb."
+    elif [ "$cmd" = "reset" ]; then
+        if [ "$subcmd" = "--help" ] || [ "$subcmd" = "-h" ]; then
+            subcmd="$4"
+            echo ""
+            echo "${WHITE}Usage:"
+            echo "${RESET} ${GOLD}mb reset${RESET} [-q|--quiet]"
+            echo ""
+            return
+        fi
+        anim=1
+        if [ "$subcmd" = "-q" ] || [ "$subcmd" = "--quiet" ]; then
+            unset anim
+        fi
+        if [ -n "$anim" ]; then
+            echo " "
+            animate_message "Unsetting mb environment variables" 0.17 "$PINK" 1 1
+        fi
+        if [ -n "$anim" ]; then
+            echo " "
+        fi
         unset MB_PROMPT
         unset MB_COLOR
-        unset MB_SOURCED
+        # unset MB_SOURCED
         unset MB_SETUP
         unset MB_EXTRAS
         unset MB_GIT
@@ -322,34 +144,47 @@ mbcmd() {
         unset MB_BENCH
         unset IN_NIX_SHELL
         unset MB_ENVVARS
-        unset MB_RC
+        . "$MB_WS/.mbnix/setup_mbnix.sh"
     elif [ "$1" = "env" ]; then
-        if [ "$2" = "--mbhelp" ]; then
-            list_envs mbhelp
-        elif [ -n "$2" ] && ! [ "$2" = "extras" ]; then
-            list_envs "$2"
+        . "$MB_WS/.mbnix/utils/listenv.sh"
+        list_envs "$2"
+    elif [ "$cmd" = "extras" ]; then
+        unset MB_EXTRAS MB_GIT MB_TREE MB_DOCTOR MB_SEARCH MB_BENCH MB_SETUP
+        . "$MB_WS/.mbnix/setup_mbnix.sh"
+        return
+    elif [ "$cmd" = "prompt" ]; then
+        if [ -z "$subcmd" ]; then
+            echo "${RED_BOLD}ERROR: MISSING ARGUMENT${RESET}"
+            echo "  ${RED}Please provide a prompt toggle.${RESET}"
+            toggle_prompt --help
+            return
+        fi
+        toggle_prompt "$subcmd"
+    elif [ "$cmd" = "switch" ]; then
+        if [ -z "$subcmd" ]; then
+            echo "${RED_BOLD}ERROR: MISSING ARGUMENT${RESET}"
+            echo "  ${RED}Please provide a workspace name.${RESET}"
+            echo " "
+            return
+        fi
+        if [ -d "$subcmd" ]; then
+            export MB_WS="$subcmd"
+            unset MB_SETUP
+            . "$MB_WS/.mbnix/setup_mbnix.sh"
         else
-            echo "MB_WS: $MB_WS"
-            echo "MB_SOURCED: $MB_SOURCED"
-            echo "MB_EXTRAS: $MB_EXTRAS"
-            echo "MB_INSTALL_DIR: $MB_INSTALL_DIR"
-            if [ -n "$2" ] && [ "$2" = "extras" ]; then
-                echo "MB_EXTRAS: $MB_EXTRAS"
-                echo "MB_GIT: $MB_GIT"
-                echo "MB_TREE: $MB_TREE"
-                echo "MB_DOCTOR: $MB_DOCTOR"
-                echo "MB_SEARCH: $MB_SEARCH"
-                echo "MB_BENCH: $MB_BENCH"
-
-            fi
-           
+            echo "${RED_BOLD}ERROR: INVALID WORKSPACE${RESET}"
+            echo "  ${RED}Workspace '$subcmd' not found.${RESET}"
+            echo " "
         fi
     else
-        echo "${PINK_BOLD}Unknown command:${RESET} $1"
-        mbhelp
-    fi
-}
 
+        mbhelp
+        echo "${RED_BOLD}ERROR: UNKOWN COMMAND${RESET}"
+        echo "  ${RED}Command '$first_arg' not recognized.${RESET}"
+        echo " "
+    fi
+
+}
 
 # ================================
 # Source Nix profile and configure
@@ -367,6 +202,8 @@ else
     echo "experimental-features = nix-command flakes" >"$NIX_CONF_DIR/nix.conf"
 fi
 
-alias mb="mbcmd" # Package python, cpp, & ros, environments in a single, declarative workspace.
-alias set_missing_env_vars="setup_envs" # Reset missing environment variables
-alias reset_env_vars="reset_envs" # Reset environment variables set by setup_envs
+
+
+mbcmd prompt on
+alias mb="mbcmd"
+unset _SETUP_MBNIX_RUNNING
