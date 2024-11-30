@@ -1,9 +1,11 @@
 #!/bin/sh
-if [ -n "$MB_SEARCH" ]; then
-    echo "search already sourced. Run 'unset MB_SEARCH' to reload."
+if [ -z "$_SEARCH_MBNIX_RUNNING" ]; then
+    export _SEARCH_MBNIX_RUNNING=0
+fi
+if [ "$_SEARCH_MBNIX_RUNNING" -eq 1 ]; then
     return
 fi
-export MB_SEARCH="sourced"
+export _SEARCH_MBNIX_RUNNING=1
 
 fzf_path_completion() {
     pyclean -e "**/*.pyc" --yes . && pyclean -e "**/__pycache__" --yes .
@@ -85,3 +87,5 @@ alias f="rg_fzf" # Fuzzy search in files
 alias c='fzf_cd' # Fuzzy cd
 alias ff='fzf_file_search' # Fuzzy file search
 alias sr='fzf_search_replace' # Fuzzy search and replace
+
+unset _SEARCH_MBNIX_RUNNING

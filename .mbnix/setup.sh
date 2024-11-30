@@ -83,29 +83,11 @@ list_aliases() {
     # Manually add the specific alias
     printf "%-20s : %s\n" "rs" "Reload the mb shell configuration."
 }
-source_unix_lang() {
-    # Get available locales
-    available_locales=$(locale -a 2>/dev/null)
-    
-    # Try common UTF-8 variants
-    for locale in "en_US.UTF-8" "en_US.utf8" "en_US.UTF8" "C.UTF-8"; do
-        if echo "$available_locales" | grep -q "^$locale$"; then
-            export LANG="$locale"
-            export LC_ALL="$locale"
-            return 0
-        fi
-    done
-    
-    # Fallback to C locale if no UTF-8 locale found
-    export LANG=C
-    export LC_ALL=C
-    echo "Warning: No UTF-8 locale found. Using C locale." >&2
-}
 
 
 
 USER_SHELL=$(get_user_shell)
-source_unix_lang 
+
 if [ -z "$MB_WS" ]; then
     echo "MB_WS environment variable is not set. Setting to $HOME/mbnix."
     export MB_WS="$HOME/mbnix"

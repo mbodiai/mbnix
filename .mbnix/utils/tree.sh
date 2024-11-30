@@ -1,9 +1,11 @@
 #!/bin/sh
-if [ -n "$MB_TREE" ]; then
-    echo "Tree already sourced. Run 'unset MB_TREE' to reload."
+if [ -z "$_TREE_MBNIX_RUNNING" ]; then
+    export _TREE_MBNIX_RUNNING=0
+fi
+if [ "$_TREE_MBNIX_RUNNING" -eq 1 ]; then
     return
 fi
-export MB_TREE="sourced"
+export _TREE_MBNIX_RUNNING=1
 treecmd() {
     show_help() {
         echo "Usage: t [-t|--timestamps] [@|DEPTH] [DIR] [TERM] [-h|--help]"
@@ -236,3 +238,5 @@ tgit() {
 alias t='treecmd' # tree: Show directory structure with optional depth and search term
 alias ts='tsearch' # tree_search: Search for term in specific file types with timestamps
 alias tg='tgit' # tree_git: Show changes with option for displaying timestamps
+
+unset _TREE_MBNIX_RUNNING

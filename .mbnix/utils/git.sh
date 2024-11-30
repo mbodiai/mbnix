@@ -1,10 +1,10 @@
 #! /usr/bin/sh
-if [ -n "$MB_GIT" ]; then
-    echo "git already sourced. Run 'unset MB_GIT' to reload."
+if [ -z "$_GIT_MBNIX_RUNNING" ]; then
+    export _GIT_MBNIX_RUNNING=0
+fi
+if [ "$_GIT_MBNIX_RUNNING" -eq 1 ]; then
     return
 fi
-export MB_GIT="sourced"
-
 git_search_term() {
     # Function to display usage/help message
     usage() {
@@ -216,3 +216,5 @@ alias gsr='git_submodule_reinit' # Reinitialize submodules and pull the temporar
 alias gsub='gsub_make' # Clean and reinitialize a submodule
 alias gsc='git_submodule_clean' # Clean a submodule and push it to a temporary branch
 alias gdc='git diff --compact-summary' # Show a compact summary of changes
+
+export _GIT_MBNIX_RUNNING=1

@@ -18,8 +18,7 @@ record_terminal() {
         # Clone the repository only if needed
         [ ! -d "$MB_WS/.termtosvg" ] && git clone https://github.com/nbedos/termtosvg.git "$MB_DIR/.termtosvg"
         
-        cd "$MB_WS/.termtosvg" || return
-MB_WS
+        cd "$MB_WS/.termtosvg" || return 1
         # Check if 'pipx' is installed; install if missing
         if ! type pipx > /dev/null 2>&1; then
             python3 -m pip install --user pipx

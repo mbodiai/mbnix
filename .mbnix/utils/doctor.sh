@@ -1,9 +1,11 @@
 #!/bin/bash
-if [ -n "$MB_DOCTOR" ]; then
-    echo "Doctor already sourced. Run 'unset MB_DOCTOR' to reload."
+if [ -z "$_DOCTOR_MBNIX_RUNNING" ]; then
+    export _DOCTOR_MBNIX_RUNNING=0
+fi
+if [ "$_DOCTOR_MBNIX_RUNNING" -eq 1 ]; then
     return
 fi
-export MB_DOCTOR="sourced"
+export _DOCTOR_MBNIX_RUNNING=1
 all_sources() {
   localhelp () {
     echo "Usage: all_sources [search_term]"
@@ -143,3 +145,4 @@ shell_doctor() {
 
 alias doctor="shell_doctor" # Show duplicate definitions in shell configuration files.
 alias allsources="all_sources" # List all sources, exports, and aliases in shell configuration files.
+unset _DOCTOR_MBNIX_RUNNING

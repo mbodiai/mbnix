@@ -1,84 +1,56 @@
-#!/usr/bin/sh
-# -----------------------------
-# HEADER
-# -----------------------------
-if [ -n "$MB_CPPASTE" ]; then
-    echo "cppaste already sourced. Run 'unset MB_CPPASTE' to reload."
-    return
+#!/usr/bin/zsh
+
+# Guard against multiple sourcing
+if [ -n "$_CPPASTE_MBNIX_RUNNING" ]; then
+    return 0
 fi
-export MB_CPPASTE="sourced"
-# -----------------------------
-# Capture Last Command and Output
-# -----------------------------
+export _CPPASTE_MBNIX_RUNNING=1
 
-# Temporary file to store command output securely
+# Initialize variables
+typeset -g last_command=""
+typeset -g last_output=""
+typeset -g TMP_OUTPUT_FILE
 TMP_OUTPUT_FILE=$(mktemp /tmp/zsh_last_command_output_XXXXXX.txt)
-chmod 600 "$TMP_OUTPUT_FILE"  # Restrict permissions
+chmod 600 "$TMP_OUTPUT_FILE"
 
-# Function to capture the last command before execution
-preexec_capture_command() {
+# Hook before command execution
+function _pre_exec() {
     last_command="$1"
+    # Clear the temporary file
+    : > "$TMP_OUTPUT_FILE"
 }
 
-# Function to capture the output of the last command after execution
-precmd_capture_output() {
-    if [[ -f "$TMP_OUTPUT_FILE" && -s "$TMP_OUTPUT_FILE" ]]; then
-        last_output=$(< "$TMP_OUTPUT_FILE")
-        # Clear the temporary file for the next command
-        > "$TMP_OUTPUT_FILE"
-    else
-        last_output=""
+# Hook after command execution
+function _pre_cmd() {
+    # Append the command output to the temporary file
+    # This assumes `last_output` is only needed interactively
+    if [ -s "$TMP_OUTPUT_FILE" ]; then
+        last_output=$(<"$TMP_OUTPUT_FILE")
     fi
 }
 
-# Set up preexec and precmd hooks
-preexec() { 
-    preexec_capture_command "$1" 
-}
-precmd() { 
-    precmd_capture_output 
-}
-
-# Redirect both stdout and stderr to the temporary file
-# Save original stdout and stderr
-exec 3>&1 4>&2
-exec > >(tee "$TMP_OUTPUT_FILE") 2>&1
-
-# -----------------------------
-# Save Last Command and Output to Files
-# -----------------------------
-
-# Function to save text to a specified file
-save_to_file() {
+# Save functions
+function save_to_file() {
     local text="$1"
     local file_path="$2"
-
     echo "$text" > "$file_path"
     echo "Saved to $file_path"
 }
 
-# -----------------------------
-# Aliases to Save Last Command and Output
-# -----------------------------
-
-# Save the last executed command to ~/last_command.txt
-alias lc='save_to_file "$(fc -ln -1)" ~/last_command.txt'
-
-# Save the output of the last executed command to ~/last_output.txt
-alias lo='save_to_file "$last_output" ~/last_output.txt'
-
-# -----------------------------
-# Cleanup Temporary File on Shell Exit
-# -----------------------------
-
-# Use Zsh's zshaddhistory hook to perform cleanup without traps
-autoload -Uz add-zsh-hook
-
-cleanup_temp_file() {
-    if [[ -f "$TMP_OUTPUT_FILE" ]]; then
-        rm -f "$TMP_OUTPUT_FILE"
-    fi
+# Cleanup function
+function _cleanup() {
+    [ -f "$TMP_OUTPUT_FILE" ] && rm -f "$TMP_OUTPUT_FILE"
 }
 
-# Add the cleanup function to the zshexit hook
-add-zsh-hook zshexit cleanup_temp_file
+# Set up aliases
+alias lc='save_to_file "$(fc -ln -1)" ~/last_command.txt'
+alias lo='save_to_file "$last_output" ~/last_output.txt'
+
+# Add hooks
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec _pre_exec
+add-zsh-hook precmd _pre_cmd
+add-zsh-hook zshexit _cleanup
+
+# Unset running guard
+unset _CPPASTE_MBNIX_RUNNING

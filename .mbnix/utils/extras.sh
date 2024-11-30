@@ -1,10 +1,10 @@
 # ==========================================
 # Copied to avoid import shell Configurations
 # ==========================================
-if [ -z $_MB_SETUP_EXTRAS_RUNNING ]; then
+if [ -z "$_MB_SETUP_EXTRAS_RUNNING" ]; then
     export _MB_SETUP_EXTRAS_RUNNING=0
 fi
-if [ $_MB_SETUP_EXTRAS_RUNNING -eq 1 ]; then
+if [ "$_MB_SETUP_EXTRAS_RUNNING" -eq 1 ]; then
     return
 fi
 export _MB_SETUP_EXTRAS_RUNNING=1
@@ -12,7 +12,7 @@ get_user_shell() {
     ps -p $$ -o comm=
 }
 
-TERM=xterm-256color
+
 # Function to use bat for pretty help pages
 man_command() {
     env \
@@ -25,7 +25,7 @@ man_command() {
         LESS_TERMCAP_us=$(printf "\e[1;32m") \
         MANWIDTH=120 man "$@" | col -b | $BAT --paging=always --color=always
 }
-export CLICOLOR=1
+
 help_command() {
     "$@" --help | $BAT --color=always --theme=ansi -
 }
@@ -424,4 +424,5 @@ export pc
 . "$MB_WS/.mbnix/utils/doctor.sh"
 . "$MB_WS/.mbnix/utils/bench.sh"
 . "$MB_WS/.mbnix/utils/record.sh"
+. "$MB_WS/.mbnix/utils/cppaste.sh"
 unset _MB_SETUP_EXTRAS_RUNNING
